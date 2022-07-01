@@ -17,3 +17,14 @@ Again the challenge is simple, you call the function `setNickame()` with your ni
 ## 4) Guess the number
 
 Simply call `guess()` with 42 as argument and msg.value equal to 1 ether.
+
+## 5) Guess the secret number
+
+We need to find which uint8 has a keccak256 hash equal to the one save in the contract. We can easily brute force the solution with a loop:
+```python
+for i in range(2 ** 8):
+    # if the hash matches, guess the number
+    if Web3.solidityKeccak(["uint8"], [i]).hex().upper() == answerHash.upper():
+        contract.guess(i, {"from": account, "value": ONE})
+```
+Then we send the transcation like the previous challenge.
