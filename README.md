@@ -28,3 +28,11 @@ for i in range(2 ** 8):
         contract.guess(i, {"from": account, "value": ONE})
 ```
 Then we send the transcation like the previous challenge.
+
+## 5) Guess the random number
+
+We need to find the number saved during the creation of the contract. Since the variable doesn't have the `public` visibility modifer, solidity didn't create a getter `answer()`, but we can still look at the contract storage and find the number:
+```python
+answer = int(w3.eth.get_storage_at(contract_address, 0).hex(), base=16)
+```
+Then we send the transcation like the previous challenge.
