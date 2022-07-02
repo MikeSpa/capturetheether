@@ -117,3 +117,9 @@ function attack() public returns (bool) {
 ```
 Now we just need to send the same transaction where we call `attack()` until the tx goes through and we recover our ethers. We only lose some gas fee.
 
+
+
+## 6) Predict the block hash
+
+Same challenge as before, except we now need to guess the hash of the current block instead of a number modulo 8. Another difference is that the answer check the hash of the block our guess transaction was in (the one in which we call `lockInGuess(bytes32 hash)`) and not the current one. If we read the solidity docs on [blockhash](https://docs.soliditylang.org/en/v0.4.24/units-and-global-variables.html#block-and-transaction-properties), we see that they are only stored for 256 blocks, for scalability reasons, and after that `blockhash(blockNumber)` will return 0. so we know that the answer will be zero in the future, we can just guess zero, wait until the block number has increased by more than 256 (it takes about an hour) and make the contract check our answer.
+
