@@ -12,7 +12,7 @@ Pretty simple, you just call the function `callMe()`.
 ## 3) Choose a nickname
 
 Again the challenge is simple, you call the function `setNickame()` with your nickname.
-2 subtilities:
+2 subtleties:
 - One, you need to call `setNickname()` on the CaptureTheEther contract at address `0x71c46Ed333C35e4E6c62D32dc7C8F00D125b4fee` and not the address given on the left.
 - Two, you need to be sure to encode your nickname correctly. The contract check the leftmost character to see if its 0 or not so you need to be sure that your nickname is save as 0xYOURNICKNAMEINHEX00000000000000000000...0 instead of 0x00000000000000000000...0YOURNICKNAMEINHEX.
 
@@ -159,3 +159,22 @@ function transferFrom(
     _transfer(to, value);
 }
 ```
+
+## 12) Retirement Fund
+
+Staying on the same theme, we need to create an underflow in the `withdrawn` variable:
+```solidity
+function collectPenalty() public {
+    require(msg.sender == beneficiary);
+
+    uint256 withdrawn = startBalance - address(this).balance;
+
+    // an early withdrawal occurred
+    require(withdrawn > 0);
+
+    // penalty is what's left
+    msg.sender.transfer(address(this).balance);
+}
+```
+In order to have an underflow, we need to increase the ether balance of the contract. Since there is no `receive()` function, we can use `selfdestruct()` to force the contract to receive some ethers.
+
