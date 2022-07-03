@@ -33,7 +33,7 @@ for i in range(2 ** 8):
 ```
 Then we send the transcation like the previous challenge.
 
-## 5) Guess the random number
+## 6) Guess the random number
 
 We need to find the number saved during the creation of the contract. Since the variable doesn't have the `public` visibility modifer, solidity didn't create a getter `answer()`, but we can still look at the contract storage and find the number:
 ```python
@@ -41,7 +41,7 @@ answer = int(w3.eth.get_storage_at(contract_address, 0).hex(), base=16)
 ```
 Then we send the transcation like the previous challenge.
 
-## 6) Guess the new number
+## 7) Guess the new number
 
 Similar to the previous challenges, we need to find the right number, only now, the number is generated at the same time we are trying to guess it.
 ```solidity
@@ -70,7 +70,7 @@ receive() external payable {}
 ```
 
 
-## 6) Predict the future
+## 8) Predict the future
 
 We need to guess a number between 0 and 9 (because of the `% 10`) and call `lockInGuess(uint8 n)`. Then with a different transaction, check wheter our guess was correct or not by calling `settle()`. The problem is, if the guess was wrong, we need to guess again and each guess cost us 1 ether:
 ```solidity
@@ -119,7 +119,25 @@ Now we just need to send the same transaction where we call `attack()` until the
 
 
 
-## 6) Predict the block hash
+## 9) Predict the block hash
 
 Same challenge as before, except we now need to guess the hash of the current block instead of a number modulo 8. Another difference is that the answer check the hash of the block our guess transaction was in (the one in which we call `lockInGuess(bytes32 hash)`) and not the current one. If we read the solidity docs on [blockhash](https://docs.soliditylang.org/en/v0.4.24/units-and-global-variables.html#block-and-transaction-properties), we see that they are only stored for 256 blocks, for scalability reasons, and after that `blockhash(blockNumber)` will return 0. so we know that the answer will be zero in the future, we can just guess zero, wait until the block number has increased by more than 256 (it takes about an hour) and make the contract check our answer.
 
+
+# Math
+
+## 10) Token sale
+
+Here we need to create an overflow in the `buy()` function in order to increase our balance on the contract without sending that much ethers:
+```solidity
+require(msg.value == numTokens * PRICE_PER_TOKEN); // PRICE_PER_TOKEN = 10^18
+```
+We need to set `numTokens` to a value that will overflow `numTokens * PRICE_PER_TOKEN` so `msg.value` can be lower that what the contract think we sent. We need to overflow the righthand side of this `require`. We know that for an `uint256` an overflow happens at 2^256, which become zero. If we divide that number by 10^18 (since numTokens will be mul by 1 ether) we get a value `x` that will be multiply by 10^18 and cause an overflow. BUT, since we first divided by 10^18, we get a float number that will be floored when given to the contract so when we multiply that number by 10^18, we'll get a smaller number that before and there will be no overflow. So before sending that `x` number to the contract, we need to add 1 to it, so `x` time 10^18 will be bigger than 2^256. Here are the numbers:
+```
+# 2^256 = 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457,584,007,913,129,639,936
+# /10^18 = 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,457.584007913129639936
+# take the floor = 11,579,208,923,731,619,542,357,098,500,868,790,785,326,998,466,564,056,403,9457 -> `x`
+# +1 = 11,579,208,923,731,619,542,357,098,500,868,790,785,326,998,466,564,056,403,9458 -> `NumTokens`
+# *10^18 = 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,458,000,000,000,000,000,000 -> what will happen in the require (will overflow) and need to be equal to msg.value
+# MOD = 415,992,086,870,360,064 -> `msg.value`
+```
