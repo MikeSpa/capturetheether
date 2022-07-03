@@ -141,3 +141,21 @@ We need to set `numTokens` to a value that will overflow `numTokens * PRICE_PER_
 # *10^18 = 115,792,089,237,316,195,423,570,985,008,687,907,853,269,984,665,640,564,039,458,000,000,000,000,000,000 -> what will happen in the require (will overflow) and need to be equal to msg.value
 # MOD = 415,992,086,870,360,064 -> `msg.value`
 ```
+
+## 11) Token whale
+
+We can see that the private function `_transfer_()` does something strange. It never take an argument for the `from` of the transfer and assumes that the transfer comes from the `msg.sender`. This cause a problem in `transferFrom()` since it calls `_transfer()` which means the transfer is between the `msg.sender `and the `_to`, but the `msg.sender` balance is never checked for underflow. So when it reduces the balance of `msg.sender`, it can underflow and the `msg.sender` ends up with a huge balance.
+```solidity
+function transferFrom(
+    address from,
+    address to,
+    uint256 value
+) public {
+    require(balanceOf[from] >= value); // check for underflow for `from` and not `msg.sender`
+    require(balanceOf[to] + value >= balanceOf[to]);
+    require(allowance[from][msg.sender] >= value);
+
+    allowance[from][msg.sender] -= value;
+    _transfer(to, value);
+}
+```
