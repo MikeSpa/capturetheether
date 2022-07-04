@@ -178,3 +178,12 @@ function collectPenalty() public {
 ```
 In order to have an underflow, we need to increase the ether balance of the contract. Since there is no `receive()` function, we can use `selfdestruct()` to force the contract to receive some ethers.
 
+## 13) Mapping
+
+We need to change the `isComplete` variable to `true`. There are no setter for this variable but we have one for the dynamic array. We just need to find which key will access the storage slot of `isComplete` and set its value to 1. This will overwrite the bool variable.
+Dynamic array variable are stored like that: 
+- The slot# corresponding to the variable (slot 1) contains the length of the array
+- The values are then store at (keccak(slot#) + i)
+We know that at slot keccak(1) will be stored map[0], at slot keccak(1) + 1 will be stored map[1], at slot keccak(1) + i will be stored map[i], at slot 2^256 -1 will be stored map[2^256 -1 -keccak(1)], and at slot 0 will be stored map[2^256 -1 -keccak(1) +1]
+
+So we call `set(2^256 -1 -keccak(1) +1, 1)`
